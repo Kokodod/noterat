@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+noterat/__init__.py
+noterat/__main__.py
+noterat/noterat.py
+noterat.egg-info/PKG-INFO
+noterat.egg-info/SOURCES.txt
+noterat.egg-info/dependency_links.txt
+noterat.egg-info/entry_points.txt
+noterat.egg-info/requires.txt
+noterat.egg-info/top_level.txt

@@ -1,0 +1,2 @@
+[console_scripts]
+noterat = noterat.noterat:cli
