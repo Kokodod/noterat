@@ -5,9 +5,13 @@ def cli():
     pass
 
 @cli.command()
-def initdb():
-    click.echo("[*] Initialize database!")
+def add():
+    click.echo("[+] Note added!")
 
 @cli.command()
-def dropdb():
-    click.echo("[*] Dropped the database!")
+def delete():
+    click.echo("[-] Note deleted!")
+
+@cli.command()
+def search():
+    click.echo("[*] List of notes:")
