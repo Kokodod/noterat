@@ -9,7 +9,7 @@ class Db:
         if db_path:
             self._connection = sqlite3.connect(db_path)
         else:
-            self._connection = sqlite3.connect(Db.DB_PATH)
+            self._connection = sqlite3.connect(Db.IN_MEMORY)
 
     def close(self):
         self._connection.close()
