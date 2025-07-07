@@ -1,9 +1,13 @@
 import click
 import sqlite3
 
+
 from rich import box
 from rich.console import Console
 from rich.table import Table
+from pathlib import Path
+
+from .db import Db
 
 
 @click.group()
@@ -14,49 +18,87 @@ def cli(ctx):
 
     This is a simple note taking CLI.
     """
-    con = sqlite3.Connection("notes.db")
-    ctx.obj = con
-    cur = con.cursor()
-    sql = r"""
-    CREATE TABLE IF NOT EXISTS notes(
-            id INTEGER PRIMARY KEY, 
-            note TEXT, 
-            date DATETIME DEFAULT CURRENT_TIMESTAMP
-            )"""
-    cur.execute(sql)
-    con.commit()
+    # db_path = Path.home() / ".local" / "share" / "noterat.db"
+    db_path = Path("noterat.db")
+    db = Db(db_path)
+    if not db_path.exists():
+        db.initialize()
+    ctx.obj = db
 
 
 @cli.command("add", short_help="Add a note.")
 @click.argument("note")
 @click.pass_obj
-def add_note(con, note: str) -> None:
-    con.cursor().execute(f"INSERT INTO notes (note) VALUES ('{note}');")
-    con.commit()
-    click.echo(f"[+] Note added: {note}")
-
-
-@cli.command("get", short_help="Get a note.")
-@click.argument("note_id")
-def get_note(note_id: str) -> None:
-    res = cur.execute(
-        f"SELECT note FROM notes WHERE id = {note_id};"
-    ).fetchone()
-    click.echo(f"{res}")
+def add_note(db, note: str) -> None:
+    with db as cur:
+        cur.execute("INSERT INTO notes (note) VALUES (?);", (note,))
+    click.echo(click.style(f"[+] Note added: {note}", fg="green"))
 
 
 @cli.command("list", short_help="List all notes.")
+@click.option(
+    "-s",
+    "--sort",
+    default="date",
+    show_default=True,
+    type=click.Choice(["date", "id"], case_sensitive=False),
+)
+@click.option(
+    "-o",
+    "--order",
+    default="desc",
+    show_default=True,
+    type=click.Choice(["desc", "asc"], case_sensitive=False),
+)
 @click.pass_obj
-def list_notes(con) -> None:
+def list_notes(db: click.Context, sort: str, order: str) -> None:
     console = Console()
     table = Table(box=box.SIMPLE, show_header=False)
-    table.add_column("Note", style="yellow", justify="left")
-    table.add_column("Date", style="red", justify="left")
-    res = (
-        con.cursor()
-        .execute("SELECT note, date FROM notes ORDER BY date DESC;")
-        .fetchall()
-    )
+    table.add_column("Id", style="magenta", justify="left")
+    table.add_column("Note", style="green", justify="left")
+    table.add_column("Date", style="yellow", justify="left")
+    if sort == "id":
+        sort = f"note_{sort}"
+    with db as cur:
+        res = cur.execute(
+            f"SELECT note_id, note, date FROM notes ORDER BY {sort} {order};",
+        ).fetchall()
+    for note in res:
+        table.add_row(
+            str(note[0]),
+            note[1],
+            str(note[2]),
+        )
+    console.print(table)
+
+
+@cli.command("delete", short_help="Delete a note.")
+def delete():
+    raise NotImplementedError
+
+
+@cli.command("find", short_help="Find a note by string.")
+@click.argument("str_to_find")
+@click.pass_obj
+def find(db: click.Context, str_to_find: str) -> None:
+    console = Console()
+    table = Table(box=box.SIMPLE, show_header=False)
+    table.add_column("Note", style="green", justify="left")
+    table.add_column("Date", style="yellow", justify="left")
+
+    with db as cur:
+        res = cur.execute(
+            f"SELECT note, date FROM notes WHERE note LIKE '%{str_to_find}%';"
+        ).fetchall()
+
+    if not res:
+        click.echo(
+            click.style(
+                f"[*] No notes found using: '{str_to_find}'", fg="yellow"
+            )
+        )
+        return
+
     for note in res:
         table.add_row(
             note[0],
@@ -65,16 +107,11 @@ def list_notes(con) -> None:
     console.print(table)
 
 
-@cli.command("delete", short_help="Delete a note.")
-def delete():
-    click.echo("[-] Note deleted!")
+@cli.command("reinit", short_help="Reinitialize the database.")
+def reinitialize():
+    raise NotImplementedError
 
 
-@cli.command("find", short_help="Find a note by text.")
-def find():
-    click.echo("[*] List of notes:")
-
-
-@cli.command("backup", short_help="Backup db.")
+@cli.command("backup", short_help="Backup all notes.")
 def backup():
-    click.echo("[*] List of notes:")
+    raise NotImplementedError
